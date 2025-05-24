@@ -27,11 +27,10 @@ operator>>(std::istream &in, T &val) {
 }
 
 class RecordID{
-private:
+public:
     int page_number;
     int slot_number;
 
-public:
     RecordID(int page_number=0,int slot_number=0){
         this->page_number = page_number;
         this->slot_number = slot_number;
@@ -83,7 +82,7 @@ public:
     virtual ~RecordScanner() = default;
     virtual void next() = 0;
     virtual bool is_end() const = 0;
-    virtual RecordID current_recordID() const = 0;
+    virtual RecordID current_record_id() const = 0;
 };
 
 #endif
