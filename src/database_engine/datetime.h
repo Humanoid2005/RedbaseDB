@@ -67,7 +67,7 @@ class DateTime{
         }
     };
     
-    bool validateDateTime(int day, int month, int year, int hour, int minute, int second){
+    inline bool validateDateTime(int day, int month, int year, int hour, int minute, int second){
         if(day<1 || day>31 || month<1 || month>12 || year<0 || hour<0 || hour>23 || minute<0 || minute>59 || second<0 || second>59){
             return false;
         }
@@ -80,11 +80,11 @@ class DateTime{
         return true;
     }
     
-    bool validateDate(int day, int month, int year){
+    inline bool validateDate(int day, int month, int year){
         return validateDateTime(day, month, year, 0, 0, 0);
     }
 
-    bool validateTime(int hour, int minute, int second){
+    inline bool validateTime(int hour, int minute, int second){
         return validateDateTime(0, 0, 0, hour, minute, second);
     }
 
