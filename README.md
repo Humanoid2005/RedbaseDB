@@ -155,14 +155,14 @@ Run the server
 ```
 
 
-## Current Limitations
+## Future Improvements
 
-1. **No authentication**: Open access
-2. **No encryption**: Plaintext transmission
-3. **No connection pooling**: New connection per client
-4. **No prepared statements**: Parse every query
-5. **No transactions**: No BEGIN/COMMIT/ROLLBACK
-6. **Buffer limits**: 4KB query, 1KB message
+1. **Authentication and RBAC**
+2. **Data encryption**
+3. **Connection pooling**
+4. **Prepared statements, Query optimisation**
+5. **Transactions**: BEGIN/COMMIT/ROLLBACK
+6. **Optimise storage to overcome Buffer limits**: 4KB query, 1KB message
 
 ## Contributions
 I welcome contributions! Feel free to fork the project and open a pull request for any improvements, bug fixes, or new features.
