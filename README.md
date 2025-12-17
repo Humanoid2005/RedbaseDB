@@ -1,4 +1,4 @@
-# AutoDB
+# AutoDB ( an updated version of RedbaseDB)
 
 A SQL Database written in C++
 
@@ -115,13 +115,13 @@ sudo apt-get install -y build-essential cmake flex bison
 Clone the project
 
 ```bash
-  git clone https://github.com/Humanoid2005/AutoDB
+  git clone https://github.com/Humanoid2005/RedbaseDB
 ```
 
 Go to the project directory
 
 ```bash
-  cd AutoDB
+  cd RedbaseDB
 ```
 
 Create build folder and move to it
