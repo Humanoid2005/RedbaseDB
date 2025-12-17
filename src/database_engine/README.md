@@ -179,12 +179,12 @@ The database engine follows a **bottom-up layered architecture** where higher la
 
 ## Key Features
 
-### ✅ **Multi-Database Support**
+### **Multi-Database Support**
 - Create, drop, and switch between multiple databases
 - Each database has its own set of tables and indexes
 - SQL Commands: `CREATE DATABASE`, `DROP DATABASE`, `USE DATABASE`, `SHOW DATABASES`
 
-### ✅ **SQL Support**
+### **SQL Support**
 **DDL (Data Definition Language):**
 - `CREATE TABLE` - Define tables with columns
 - `DROP TABLE` - Delete tables
@@ -199,24 +199,24 @@ The database engine follows a **bottom-up layered architecture** where higher la
 - `UPDATE` - Modify records
 - `DELETE` - Remove records
 
-### ✅ **Data Types**
+### **Data Types**
 - `INT` - 32-bit integers
 - `FLOAT` - 32-bit floating point
 - `CHAR(n)` / `STRING` - Fixed/variable length strings
 - `DATETIME` - Date and time (stored as DateTime object with 6 integer fields)
 
-### ✅ **Indexing**
+### **Indexing**
 - **B+ Tree indexes** for efficient lookups
 - Supports all data types
 - Automatic index maintenance on INSERT/UPDATE/DELETE
 - Range queries and point lookups
 
-### ✅ **Query Optimization**
+### **Query Optimization**
 - Condition pushdown to reduce intermediate results
 - Index utilization for faster access
 - Nested loop joins
 
-### ✅ **Buffer Management**
+### **Buffer Management**
 - LRU (Least Recently Used) page replacement
 - 65,536-page buffer pool
 - Efficient disk I/O minimization
