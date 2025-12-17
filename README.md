@@ -164,6 +164,10 @@ Run the server
 5. **Transactions**: BEGIN/COMMIT/ROLLBACK
 6. **Optimise storage to overcome Buffer limits**: 4KB query, 1KB message
 
+## References
+
+[RedBase Stanford Course](https://web.stanford.edu/class/cs346/2015/redbase.html)
+
 ## Contributions
 I welcome contributions! Feel free to fork the project and open a pull request for any improvements, bug fixes, or new features.
 
