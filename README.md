@@ -1,4 +1,4 @@
-# AutoDB
+# AutoDB ( an updated version of RedbaseDB)
 
 A SQL Database written in C++
 
@@ -116,13 +116,13 @@ sudo apt-get install -y build-essential cmake flex bison
 Clone the project
 
 ```bash
-  git clone https://github.com/Humanoid2005/AutoDB
+  git clone https://github.com/Humanoid2005/RedbaseDB
 ```
 
 Go to the project directory
 
 ```bash
-  cd AutoDB
+  cd RedbaseDB
 ```
 
 Create build folder and move to it
@@ -156,14 +156,27 @@ Run the server
 ```
 
 
-## Current Limitations
+## Future Improvements
 
+<<<<<<< HEAD
 1. **No authentication**: Open access
 2. **No encryption**: Plaintext transmission
 3. **No connection pooling**: New connection per client
 4. **No prepared statements**: Parse every query
 5. **No transactions**: No BEGIN/COMMIT/ROLLBACK (concurrency control implemented)
 6. **Buffer limits**: 4KB query, 1KB message
+=======
+1. **Authentication and RBAC**
+2. **Data encryption**
+3. **Connection pooling**
+4. **Prepared statements, Query optimisation**
+5. **Transactions**: BEGIN/COMMIT/ROLLBACK
+6. **Optimise storage to overcome Buffer limits**: 4KB query, 1KB message
+
+## References
+
+[RedBase Stanford Course](https://web.stanford.edu/class/cs346/2015/redbase.html)
+>>>>>>> 8b5e05d46cc0d3c42d84d9b3328d69629ffde716
 
 ## Contributions
 I welcome contributions! Feel free to fork the project and open a pull request for any improvements, bug fixes, or new features.
