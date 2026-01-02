@@ -27,6 +27,7 @@ add_library(AUTODB-cpp STATIC
         database_engine/system_management/sm_manager.cpp
         database_engine/query_language/ql_manager.cpp database_engine/query_language/ql_node.cpp
         database_engine/parser/ast.cpp
+        database_engine/concurrency.cpp
         ${BISON_Parser_OUTPUTS}
         ${FLEX_Lexer_OUTPUTS}
 )

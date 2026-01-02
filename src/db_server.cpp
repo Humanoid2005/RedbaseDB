@@ -1,6 +1,7 @@
 #include "database_engine/interpreter.h"
 #include "database_engine/system_management/sm.h"
 #include "database_engine/parser/parser.h"
+#include "database_engine/concurrency.h"
 #include <iostream>
 #include <cstring>
 #include <sys/socket.h>
@@ -13,6 +14,7 @@
 #include <pthread.h>
 #include <vector>
 #include <atomic>
+#include <signal.h>
 
 #define SERVER_PORT 8888
 #define BUFFER_SIZE 65536
@@ -23,6 +25,14 @@ pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Active client counter
 std::atomic<int> active_clients(0);
+
+// Cleanup handler for graceful shutdown
+void cleanup_handler(int signum) {
+    std::cout << "\nShutting down server..." << std::endl;
+    cleanup_db_semaphores();
+    pthread_mutex_destroy(&log_mutex);
+    exit(0);
+}
 
 // Message types
 enum MessageType {
@@ -376,6 +386,13 @@ void* client_thread_handler(void* arg) {
 }
 
 int main() {
+    // Initialize semaphores
+    setup_db_semaphores();
+    
+    // Register signal handlers for graceful shutdown
+    signal(SIGINT, cleanup_handler);
+    signal(SIGTERM, cleanup_handler);
+    
     struct sockaddr_in server, client;
     socklen_t client_len = sizeof(client);
     int client_id_counter = 0;

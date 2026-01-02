@@ -1,4 +1,5 @@
 #include "pf_pager.h"
+#include "database_engine/concurrency.h"
 #include <cassert>
 #include <unistd.h>
 
@@ -16,16 +17,50 @@ PF_Pager::~PF_Pager() {
 }
 
 void PF_Pager::read_page(int fd, int page_no, uint8_t *buf, int num_bytes) {
+    // File lock for the specific page
+    struct flock lock;
+    lock.l_type = F_RDLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = page_no * PAGE_SIZE;
+    lock.l_len = PAGE_SIZE;
+    
+    // Apply file lock
+    if (fcntl(fd, F_SETLKW, &lock) == -1) {
+        throw UnixError();
+    }
+    
     lseek(fd, page_no * PAGE_SIZE, SEEK_SET);
     ssize_t bytes_read = read(fd, buf, num_bytes);
+    
+    // Release file lock
+    lock.l_type = F_UNLCK;
+    fcntl(fd, F_SETLK, &lock);
+    
     if (bytes_read != num_bytes) {
         throw UnixError();
     }
 }
 
 void PF_Pager::write_page(int fd, int page_no, const uint8_t *buf, int num_bytes) {
+    // File lock for writing
+    struct flock lock;
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = page_no * PAGE_SIZE;
+    lock.l_len = PAGE_SIZE;
+    
+    // Apply file lock
+    if (fcntl(fd, F_SETLKW, &lock) == -1) {
+        throw UnixError();
+    }
+    
     lseek(fd, page_no * PAGE_SIZE, SEEK_SET);
     ssize_t bytes_write = write(fd, buf, num_bytes);
+    
+    // Release file lock
+    lock.l_type = F_UNLCK;
+    fcntl(fd, F_SETLK, &lock);
+    
     if (bytes_write != num_bytes) {
         throw UnixError();
     }
@@ -40,6 +75,8 @@ Page *PF_Pager::create_page(int fd, int page_no) {
 Page *PF_Pager::fetch_page(int fd, int page_no) { return get_page<true>(fd, page_no); }
 
 void PF_Pager::flush_file(int fd) {
+    sem_wait(cache_sem);  // SEMAPHORE: Protect cache structures
+    
     auto it_page = _busy_pages.begin();
     while (it_page != _busy_pages.end()) {
         auto prev_page = it_page;
@@ -48,6 +85,8 @@ void PF_Pager::flush_file(int fd) {
             flush_page(*prev_page);
         }
     }
+    
+    sem_post(cache_sem);  // SEMAPHORE: Release
 }
 
 void PF_Pager::force_page(Page *page) {
@@ -59,6 +98,8 @@ void PF_Pager::force_page(Page *page) {
 
 template <bool EXISTS>
 Page *PF_Pager::get_page(int fd, int page_no) {
+    sem_wait(cache_sem);  // SEMAPHORE: Protect cache structures
+    
     Page *page;
     PageID page_id(fd, page_no);
     auto map_it = _busy_map.find(page_id);
@@ -86,6 +127,8 @@ Page *PF_Pager::get_page(int fd, int page_no) {
         page = *map_it->second;
         access(page);
     }
+    
+    sem_post(cache_sem);  // SEMAPHORE: Release
     return page;
 }
 
@@ -105,10 +148,14 @@ void PF_Pager::flush_page(Page *page) {
 }
 
 void PF_Pager::flush_all() {
+    sem_wait(cache_sem);  // SEMAPHORE: Protect cache structures
+    
     for (Page *page : _busy_pages) {
         force_page(page);
     }
     _free_pages.insert(_free_pages.end(), _busy_pages.begin(), _busy_pages.end());
     _busy_pages.clear();
     _busy_map.clear();
+    
+    sem_post(cache_sem);  // SEMAPHORE: Release
 }

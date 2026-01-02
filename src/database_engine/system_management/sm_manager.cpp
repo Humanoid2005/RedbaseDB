@@ -1,4 +1,5 @@
 #include "sm_manager.h"
+#include "database_engine/concurrency.h"
 #include "database_engine/index_handler/ndx.h"
 #include "database_engine/record_manager/rm.h"
 #include <fstream>
@@ -41,6 +42,8 @@ void SM_Manager::register_database(const std::string &db_name) {
     std::string db_dir = base_dir + "/databases";
     mkdir(db_dir.c_str(), 0755);
     
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect db list file
+    
     // Read existing database list
     std::vector<std::string> db_list;
     std::string list_file = base_dir + "/" + DB_LIST_FILE;
@@ -65,10 +68,15 @@ void SM_Manager::register_database(const std::string &db_name) {
     for (const auto& name : db_list) {
         ofs << name << '\n';
     }
+    
+    sem_post(metadata_sem);  // SEMAPHORE: Release
 }
 
 void SM_Manager::unregister_database(const std::string &db_name) {
     initialize_base_dir();
+    
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect db list file
+    
     std::vector<std::string> db_list;
     std::string list_file = base_dir + "/" + DB_LIST_FILE;
     std::ifstream ifs(list_file);
@@ -86,6 +94,8 @@ void SM_Manager::unregister_database(const std::string &db_name) {
     for (const auto& name : db_list) {
         ofs << name << '\n';
     }
+    
+    sem_post(metadata_sem);  // SEMAPHORE: Release
 }
 
 std::vector<std::string> SM_Manager::list_databases() {
@@ -165,15 +175,20 @@ void SM_Manager::open_db(const std::string &db_name) {
         throw DatabaseNotFoundError(db_name);
     }
     
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect metadata
+    
     // Close current database if any is open
     if (!current_db_name.empty()) {
+        sem_post(metadata_sem);  // Release before calling close_db (which locks)
         close_db();
+        sem_wait(metadata_sem);  // Re-acquire
     }
     
     std::string db_path = get_db_path(db_name);
     
     // cd to database dir
     if (chdir(db_path.c_str()) < 0) {
+        sem_post(metadata_sem);
         throw UnixError();
     }
     
@@ -183,6 +198,11 @@ void SM_Manager::open_db(const std::string &db_name) {
     ifs.close();
     
     current_db_name = db_name;
+    
+    sem_post(metadata_sem);  // SEMAPHORE: Release
+    
+    sem_wait(file_handles_sem);  // SEMAPHORE: Protect fhs
+    sem_wait(index_handles_sem);  // SEMAPHORE: Protect ihs
     
     // Open all record files & index files
     for (auto &entry : db.tabs) {
@@ -197,10 +217,16 @@ void SM_Manager::open_db(const std::string &db_name) {
             }
         }
     }
+    
+    sem_post(index_handles_sem);  // SEMAPHORE: Release
+    sem_post(file_handles_sem);   // SEMAPHORE: Release
 }
 
 void SM_Manager::close_db() {
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect metadata
+    
     if (current_db_name.empty()) {
+        sem_post(metadata_sem);
         throw InternalError("No database is currently open");
     }
     
@@ -212,11 +238,19 @@ void SM_Manager::close_db() {
     db.name.clear();
     db.tabs.clear();
     
+    sem_post(metadata_sem);  // SEMAPHORE: Release
+    
+    sem_wait(file_handles_sem);  // SEMAPHORE: Protect fhs
+    
     // Close all record files
     for (auto &entry : fhs) {
         RM_Manager::close_file(entry.second.get());
     }
     fhs.clear();
+    
+    sem_post(file_handles_sem);  // SEMAPHORE: Release
+    
+    sem_wait(index_handles_sem);  // SEMAPHORE: Protect ihs
     
     // Close all index files
     for (auto &entry : ihs) {
@@ -224,12 +258,19 @@ void SM_Manager::close_db() {
     }
     ihs.clear();
     
+    sem_post(index_handles_sem);  // SEMAPHORE: Release
+    
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect metadata
+    
     // Navigate back to root
     if (chdir("../..") < 0) {
+        sem_post(metadata_sem);
         throw UnixError();
     }
     
     current_db_name.clear();
+    
+    sem_post(metadata_sem);  // SEMAPHORE: Release
 }
 
 ShowTablesResult SM_Manager::show_tables() {
@@ -258,7 +299,10 @@ DescTableResult SM_Manager::desc_table(const std::string &tab_name) {
 }
 
 void SM_Manager::create_table(const std::string &tab_name, const std::vector<ColumnInfo> &col_defs) {
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect metadata
+    
     if (db.is_table(tab_name)) {
+        sem_post(metadata_sem);
         throw TableExistsError(tab_name);
     }
     // Create table meta
@@ -274,29 +318,45 @@ void SM_Manager::create_table(const std::string &tab_name, const std::vector<Col
     int record_size = curr_offset;
     RM_Manager::create_file(tab_name, record_size);
     db.tabs[tab_name] = tab;
+    
+    sem_post(metadata_sem);  // SEMAPHORE: Release
+    
+    sem_wait(file_handles_sem);  // SEMAPHORE: Protect fhs
     fhs[tab_name] = RM_Manager::open_file(tab_name);
+    sem_post(file_handles_sem);  // SEMAPHORE: Release
 }
 
 void SM_Manager::drop_table(const std::string &tab_name) {
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect metadata
     // Find table index in db meta
     Table_Metadata &tab = db.get_table(tab_name);
+    sem_post(metadata_sem);  // SEMAPHORE: Release
+    
+    sem_wait(file_handles_sem);  // SEMAPHORE: Protect fhs
     // Close & destroy record file
     RM_Manager::close_file(fhs.at(tab_name).get());
     RM_Manager::destroy_file(tab_name);
+    fhs.erase(tab_name);
+    sem_post(file_handles_sem);  // SEMAPHORE: Release
+    
     // Close & destroy index file
     for (auto &col : tab.cols) {
         if (col.index) {
             SM_Manager::drop_index(tab_name, col.name);
         }
     }
+    
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect metadata
     db.tabs.erase(tab_name);
-    fhs.erase(tab_name);
+    sem_post(metadata_sem);  // SEMAPHORE: Release
 }
 
 void SM_Manager::create_index(const std::string &tab_name, const std::string &col_name) {
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect metadata
     Table_Metadata &tab = db.get_table(tab_name);
     auto col = tab.get_col(col_name);
     if (col->index) {
+        sem_post(metadata_sem);
         throw IndexExistsError(tab_name, col_name);
     }
     // Create index file
@@ -304,32 +364,52 @@ void SM_Manager::create_index(const std::string &tab_name, const std::string &co
     IndexManager::create_index(tab_name, col_idx, col->type, col->len);
     // Open index file
     auto ih = IndexManager::open_index(tab_name, col_idx);
+    sem_post(metadata_sem);  // SEMAPHORE: Release
+    
+    sem_wait(file_handles_sem);  // SEMAPHORE: Protect fhs
     // Get record file handle
     auto fh = fhs.at(tab_name).get();
+    sem_post(file_handles_sem);  // SEMAPHORE: Release
+    
     // Index all records into index
     for (RM_Iterator rm_scan(fh); !rm_scan.is_end(); rm_scan.next()) {
         auto rec = fh->get_record(rm_scan.get_RecordID());
         const uint8_t *key = rec->data + col->offset;
         ih->insert_entry(key,rm_scan.get_RecordID());
     }
+    
+    sem_wait(index_handles_sem);  // SEMAPHORE: Protect ihs
     // Store index handle
     auto index_name = IndexManager::get_index_name(tab_name, col_idx);
     assert(ihs.count(index_name) == 0);
     ihs[index_name] = std::move(ih);
+    sem_post(index_handles_sem);  // SEMAPHORE: Release
+    
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect metadata
     // Mark column index as created
     col->index = true;
+    sem_post(metadata_sem);  // SEMAPHORE: Release
 }
 
 void SM_Manager::drop_index(const std::string &tab_name, const std::string &col_name) {
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect metadata
     Table_Metadata &tab = db.tabs[tab_name];
     auto col = tab.get_col(col_name);
     if (!col->index) {
+        sem_post(metadata_sem);
         throw IndexNotFoundError(tab_name, col_name);
     }
     int col_idx = col - tab.cols.begin();
     auto index_name = IndexManager::get_index_name(tab_name, col_idx);
+    sem_post(metadata_sem);  // SEMAPHORE: Release
+    
+    sem_wait(index_handles_sem);  // SEMAPHORE: Protect ihs
     IndexManager::close_index(ihs.at(index_name).get());
     IndexManager::destroy_index(tab_name, col_idx);
     ihs.erase(index_name);
+    sem_post(index_handles_sem);  // SEMAPHORE: Release
+    
+    sem_wait(metadata_sem);  // SEMAPHORE: Protect metadata
     col->index = false;
+    sem_post(metadata_sem);  // SEMAPHORE: Release
 }

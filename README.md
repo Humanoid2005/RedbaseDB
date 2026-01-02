@@ -11,6 +11,7 @@ This is a relational database management system (RDBMS) with:
 - **Query Language**: Full SQL support (CREATE, INSERT, SELECT, UPDATE, DELETE)
 - **Client-Server**: TCP/IP-based remote access
 - **Type System**: INT, FLOAT, CHAR(n), DATETIME
+- **Concurrency Control**: Binary semaphores for in-memory structures + file locks (fcntl) for disk I/O
 
 ## Architecture
 
@@ -161,7 +162,7 @@ Run the server
 2. **No encryption**: Plaintext transmission
 3. **No connection pooling**: New connection per client
 4. **No prepared statements**: Parse every query
-5. **No transactions**: No BEGIN/COMMIT/ROLLBACK
+5. **No transactions**: No BEGIN/COMMIT/ROLLBACK (concurrency control implemented)
 6. **Buffer limits**: 4KB query, 1KB message
 
 ## Contributions

@@ -373,8 +373,7 @@ ctest
 ## Future Enhancements
 
 - **Query optimization**: Cost-based optimizer, join ordering
-- **Concurrency control**: Locking, MVCC (Multi-Version Concurrency Control)
-- **Transaction management**: ACID properties, logging, recovery
+- **Transaction management**: ACID properties, logging, recovery (concurrency control implemented)
 - **Advanced indexing**: Hash indexes, bitmap indexes
 - **Storage optimization**: Compression, variable-length records
 - **Distributed execution**: Sharding, replication
