@@ -158,14 +158,6 @@ Run the server
 
 ## Future Improvements
 
-<<<<<<< HEAD
-1. **No authentication**: Open access
-2. **No encryption**: Plaintext transmission
-3. **No connection pooling**: New connection per client
-4. **No prepared statements**: Parse every query
-5. **No transactions**: No BEGIN/COMMIT/ROLLBACK (concurrency control implemented)
-6. **Buffer limits**: 4KB query, 1KB message
-=======
 1. **Authentication and RBAC**
 2. **Data encryption**
 3. **Connection pooling**
