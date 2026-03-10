@@ -168,7 +168,6 @@ Run the server
 ## References
 
 [RedBase Stanford Course](https://web.stanford.edu/class/cs346/2015/redbase.html)
->>>>>>> 8b5e05d46cc0d3c42d84d9b3328d69629ffde716
 
 ## Contributions
 I welcome contributions! Feel free to fork the project and open a pull request for any improvements, bug fixes, or new features.
